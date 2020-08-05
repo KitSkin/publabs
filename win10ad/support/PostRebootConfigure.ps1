@@ -1,6 +1,14 @@
-param([string]$domain="opsaaddemo.local",[string]$repo="https://github.com/KitSkin/publabs/raw/master/win10ad",[string]$Folder="C:\OpsgilityTraining")
+param(
+    [string]$domain="opsaaddemo.local",
+    [string]$repo="https://github.com/KitSkin/publabs/raw/master/win10ad",
+    [string]$Folder="C:\OpsgilityTraining",
+    [string]$cmdLogPath
+    )
 
 Begin {
+    Start-Transcript "C:\PostRebootConfigure_log.txt"
+    $cmdLogPath = "C:\PostRebootConfigure_log_cmd.txt"
+
     Function Expand-Files {
         [cmdletbinding()]
         Param (
@@ -19,7 +27,7 @@ Begin {
             
             $7zEXE = "$Folder\7z\7za.exe"
     
-            cmd /c "$7zEXE x -y -o$Destination\$fileBase $fileName" #| Add-Content $cmdLogPath
+            cmd /c "$7zEXE x -y -o$Destination\$fileBase $fileName" | Add-Content $cmdLogPath
             
             write-output "Finish unzip: $fileName to $Destination"
         }
@@ -27,6 +35,7 @@ Begin {
 }
 
 Process {
+    
 # Download post-migration conteent files
 Write-Output "Download with Bits"
 $sourceFolder = "$repo/support"
@@ -50,4 +59,8 @@ $FileItems | Expand-Files -Destination $Folder
 &"$Folder\StudentFiles\DomainUpdate.ps1" -SharePath "$Folder\StudentFiles\LabFiles"
 
 
+}
+
+End {
+    Stop-Transcript
 }
