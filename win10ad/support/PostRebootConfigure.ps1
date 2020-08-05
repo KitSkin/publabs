@@ -1,4 +1,4 @@
-param([string]$domain="opsaaddemo.local",[string]$repo="",[string]$Folder="C:\OpsgilityTraining")
+param([string]$domain="opsaaddemo.local",[string]$repo="https://github.com/KitSkin/publabs/raw/master/win10ad",[string]$Folder="C:\OpsgilityTraining")
 
 Begin {
     Function Expand-Files {
@@ -13,12 +13,13 @@ Begin {
         {
             $fileName = $file.FullName
             $fileBase = $file.BaseName
+            $null=mkdir "$Destination\$fileBase" -ErrorAction SilentlyContinue
     
             write-output "Start unzip: $fileName to $Destination"
             
             $7zEXE = "$Folder\7z\7za.exe"
     
-            cmd /c "$7zEXE x -y -o$Destination\$fileBase $fileName" | Add-Content $cmdLogPath
+            cmd /c "$7zEXE x -y -o$Destination\$fileBase $fileName" #| Add-Content $cmdLogPath
             
             write-output "Finish unzip: $fileName to $Destination"
         }
@@ -44,7 +45,7 @@ Import-Module BitsTransfer
 
 # extract content
 $FileItems = $destinationFiles | Get-Item
-$FileItems | Extract-Files -Destination $Folder
+$FileItems | Expand-Files -Destination $Folder
 
 &"$Folder\StudentFiles\DomainUpdate.ps1" -SharePath "$Folder\StudentFiles\LabFiles"
 
