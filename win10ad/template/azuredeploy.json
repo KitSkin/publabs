@@ -37,7 +37,7 @@
         }
     },
     "variables": {
-        "repoUri": "https://raw.githubusercontent.com/opsgility/labs/master/win10-domain-essentials",
+        "repoUri": "https://github.com/KitSkin/publabs/raw/master/win10ad",
         "baseUri": "[concat(variables('repoUri'),'/template')]",
         "ADInstallScript": "[concat(variables('baseUri'),'/','script-extensions/deploy-ad.ps1')]",
         "ADJoinScript": "[concat(variables('baseUri'),'/','script-extensions/domain-join.ps1')]"
