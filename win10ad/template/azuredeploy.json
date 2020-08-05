@@ -1,0 +1,126 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminUsername": {
+            "type": "string",
+            "defaultValue": "demouser",
+            "metadata": {
+                "description": "The name of the administrator account of the new VM and domain"
+            }
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "defaultValue": "demo@pass123",
+            "metadata": {
+                "description": "The password for the administrator account of the new VM and domain"
+            }
+        },
+        "domainName": {
+            "type": "string",
+            "defaultValue": "opsaaddemo.local",
+            "metadata": {
+                "description": "The FQDN of the Active Directory Domain to be created"
+            }
+        },
+        "vmPrefix": {
+            "type": "string",
+            "defaultValue": "MSVM"
+        },
+        "clientCount": {
+            "type": "int",
+            "defaultValue": 2
+        },
+        "skipClientJoins": {
+            "type": "int",
+            "defaultValue": 1
+        }
+    },
+    "variables": {
+        "repoUri": "https://raw.githubusercontent.com/opsgility/labs/master/win10-domain-essentials",
+        "baseUri": "[concat(variables('repoUri'),'/template')]",
+        "ADInstallScript": "[concat(variables('baseUri'),'/','script-extensions/deploy-ad.ps1')]",
+        "ADJoinScript": "[concat(variables('baseUri'),'/','script-extensions/domain-join.ps1')]"
+    },
+    "resources": [
+        {
+            "name": "VirtualNetwork",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-09-01",
+            "dependsOn": [],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('baseUri'), '/', 'nested-templates/vnet.json')]",
+                    "contentVersion": "1.0.0.0"
+                }
+            }
+        },
+        {
+            "name": "ActiveDirectory",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-09-01",
+            "dependsOn": [
+                "Microsoft.Resources/deployments/VirtualNetwork"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('baseUri'), '/', 'nested-templates/active-directory.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "adminUserName": { "value": "[parameters('adminUserName')]" },
+                    "adminPassword": { "value": "[parameters('adminPassword')]" },
+                    "domainName": { "value": "[parameters('domainName')]" },
+                    "adInstallScriptUrl": { "value": "[variables('ADInstallScript')]" },
+                    "baseRepo": { "value": "[variables('repoUri')]"}
+                }
+            }
+        },
+        {
+            "name": "VirtualNetworkWithDNS",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-09-01",
+            "dependsOn": [
+                "Microsoft.Resources/deployments/ActiveDirectory"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('baseUri'), '/', 'nested-templates/vnet-with-dns.json')]",
+                    "contentVersion": "1.0.0.0"
+                }
+            }
+        },
+        {
+            "name": "[concat('MemberClient',copyIndex())]",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-09-01",
+            "dependsOn": [
+                "Microsoft.Resources/deployments/VirtualNetworkWithDNS"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('baseUri'), '/', 'nested-templates/member-client.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "adminUserName": { "value": "[parameters('adminUserName')]" },
+                    "adminPassword": { "value": "[parameters('adminPassword')]" },
+                    "domainName": { "value": "[parameters('domainName')]" },
+                    "vmName": { "value": "[concat(parameters('vmPrefix'),copyIndex())]" },
+                    "DomainJoinscriptUrl": { "value": "[variables('ADJoinScript')]" },
+                    "JoinDomain": { "value": "[greaterOrEquals(copyIndex(),parameters('skipClientJoins'))]"}
+                }
+            },
+            "copy": {
+                "name": "MemberClients",
+                "count": "[parameters('clientCount')]"
+            }
+        }
+    ],
+    "outputs": {
+    }
+}
